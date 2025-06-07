@@ -4,7 +4,6 @@
 This project enables players to take turns hosting a Minecraft world through a combination of:
 1. A Minecraft Forge mod (Git World Sync Mod)
 2. A coordination server for host management
-3. A launcher CLI for easy hosting and connecting
 
 Players can seamlessly transfer hosting duties without manually transferring world files. The system uses Git repositories to manage world state transfers and a coordination server to track who's currently hosting.
 
@@ -13,6 +12,7 @@ Players can seamlessly transfer hosting duties without manually transferring wor
 ### 1. Git World Sync Mod (Minecraft Forge Mod)
 - Handles synchronization between the local Minecraft world and a Git repository
 - Automatically pulls/pushes world data during server start/stop
+- Provides integrated in-game UI for world management and hosting controls
 - See `GitWorldSyncMod.txt` for detailed implementation
 
 ### 2. Coordination Server
@@ -20,20 +20,12 @@ Players can seamlessly transfer hosting duties without manually transferring wor
 - Provides API endpoints for host management and status checking
 - See `CoordinationServer.txt` for detailed implementation
 
-### 3. Launcher CLI
-- Simplified interface for players to host or connect
-- Manages world sync, server startup, and coordination server communication
-- See `LauncherCLI.txt` for detailed implementation
-
 ## System Architecture
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Player 1 PC    │     │  Player 2 PC    │     │  Player 3 PC    │
 │  ┌───────────┐  │     │  ┌───────────┐  │     │  ┌───────────┐  │
-│  │ Launcher  │──┼─────┼─▶│ Launcher  │──┼─────┼─▶│ Launcher  │  │
-│  └───────────┘  │     │  └───────────┘  │     │  └───────────┘  │
-│  ┌───────────┐  │     │  ┌───────────┐  │     │  ┌───────────┐  │
-│  │Git World  │  │     │  │Git World  │  │     │  │Git World  │  │
+│  │Git World  │──┼─────┼─▶│Git World  │──┼─────┼─▶│Git World  │  │
 │  │Sync Mod   │  │     │  │Sync Mod   │  │     │  │Sync Mod   │  │
 │  └───────────┘  │     │  └───────────┘  │     │  └───────────┘  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
@@ -57,17 +49,17 @@ Players can seamlessly transfer hosting duties without manually transferring wor
    - Deploy the coordination server
 
 2. **Hosting Process**:
-   - Player checks coordination server for current host status
+   - Player checks coordination server for current host status via the mod's in-game UI
    - If no active host, player can claim hosting role
-   - Launcher pulls latest world from Git
-   - Starts Minecraft server with reverse tunnel
+   - Mod pulls latest world from Git
+   - Starts Minecraft server with integrated reverse tunnel
    - Registers as host with coordination server
    - Other players connect via the tunnel URL
 
 3. **Host Transition**:
    - Current host stops their server
    - Git World Sync Mod pushes world to Git
-   - Launcher notifies coordination server that host role is released
+   - Mod notifies coordination server that host role is released
    - Next player in queue can become host
 
 ## Project Directory Structure
@@ -77,21 +69,17 @@ git-world-hosting-system/
 │   └── [See GitWorldSyncMod.txt for details]
 ├── coordination-server/        # Host management server
 │   └── [See CoordinationServer.txt for details]
-├── launcher-cli/               # Player interface tool
-│   └── [See LauncherCLI.txt for details]
 └── docs/                       # Documentation
     ├── Context.txt             # This file
     ├── GitWorldSyncMod.txt     # Mod documentation
-    ├── CoordinationServer.txt  # Server documentation
-    └── LauncherCLI.txt         # Launcher documentation
+    └── CoordinationServer.txt  # Server documentation
 ```
 
 ## Development Priorities
 1. Build and test Git World Sync Mod
 2. Implement basic coordination server
-3. Create launcher CLI
-4. Integration testing of all components
-5. User documentation and tutorials
+3. Integration testing of components
+4. User documentation and tutorials
 
 ## Contact
 For questions or contributions, please contact the original developer or refer to the project repository.
