@@ -144,7 +144,7 @@ Fully integrated UI within Minecraft for:
 
 ## 🤝 Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](#) (link placeholder) for details on how to get started with development.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) (link placeholder) for details on how to get started with development.
 
 ## 📊 System Requirements
 
@@ -191,7 +191,7 @@ The system includes conflict resolution strategies. For most conflicts, it will 
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](#) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
