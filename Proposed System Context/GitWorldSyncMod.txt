@@ -1,0 +1,333 @@
+# Git World Sync Mod
+
+## Overview
+This Minecraft Forge mod synchronizes the Minecraft world folder with a Git repository. It enables a turn-based hosting system, allowing multiple players to host the same world by pushing and pulling world state to/from a remote Git repository. This eliminates the manual transfer of world files between players who want to take turns hosting. All functionality is integrated directly within Minecraft's interface, requiring no external launcher.
+
+## Planned Features -1
+1. **Git Operations**:
+   - Pull the latest world from the Git repository when the server starts.
+   - Push the updated world to the Git repository when the server stops.
+   - Branch management for different world versions or backups.
+
+2. **Thread-Safe Locking**:
+   - Ensures only one Git operation (push or pull) happens at a time using the `LockManager` class.
+   - Prevents world corruption during Git operations.
+
+3. **Integration with Minecraft Events**:
+   - Automatically pulls the world from Git during the `ServerStartingEvent`.
+   - Automatically pushes the world to Git during the `ServerStoppingEvent`.
+   - Handles world saving before Git operations to ensure data consistency.
+
+4. **Configuration System**:
+   - Customizable settings for Git repository URL, credentials, branch name, etc.
+   - In-game configuration UI for easy setup and management.
+   - Support for configuration files for server-side settings.
+
+## Planned Features -2
+1. **Automated Backup System**:
+   - Regular automatic commits at configurable intervals.
+   - Backup rotation and management to prevent repository bloat.
+   - Emergency backup before potentially destructive operations.
+
+2. **Command System**:
+   - In-game commands for manual Git operations (`/gitsync pull`, `/gitsync push`, etc.).
+   - Permission system to control who can execute Git commands.
+   - Status command to check synchronization state.
+
+3. **Player Notification System**:
+   - Notify players about Git operations (start, completion, errors).
+   - Optional integration with Discord webhook for remote notifications.
+   - Visual indicators for ongoing Git operations.
+
+4. **Conflict Resolution**:
+   - Smart handling of merge conflicts.
+   - Option to restore from last known good state.
+   - Conflict resolution UI for admin players.
+
+5. **World Diff Viewer**:
+   - View changes between world versions.
+   - Track player modifications to the world.
+   - Revert specific changes without full rollback.
+
+6. **Host Transition Protocol**:
+   - Coordinated handover between hosts.
+   - Waiting period for new hosts to ensure clean transition.
+   - Host queue management system.
+
+7. **Performance Optimizations**:
+   - Selective synchronization of only changed chunks.
+   - Compression of world data before pushing to Git.
+   - Multi-threaded Git operations where safe to do so.
+   
+8. **Host Optimization Feature**:
+   - Automatic host switching based on system specifications and performance metrics.
+   - Collection and reporting of host system specifications.
+   - Real-time server performance monitoring and lag detection.
+   - Seamless migration between hosts to minimize downtime.
+   - Automatic client reconnection to new host.
+
+## Integration with Coordination Server
+- API client to communicate with the coordination server
+- Status updates to sync host changes with server
+- Queue management integration
+- Heartbeat implementation for server status
+- Performance metrics reporting for host optimization
+- System specification collection and comparison
+
+## Project Structure
+```
+git-world-sync-mod/
+├── build.gradle          # Gradle build file with dependencies for Forge and JGit
+├── settings.gradle       # Gradle settings file
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/
+│       │       └── example/
+│       │           └── gitworldsync/
+│       │               ├── GitHandler.java           # Handles Git operations (pull/push)
+│       │               ├── GitWorldSyncMod.java      # Main mod class
+│       │               ├── LockManager.java          # Manages locking for Git operations
+│       │               ├── config/
+│       │               │   ├── ConfigHandler.java    # Handles mod configuration
+│       │               │   └── ConfigScreen.java     # In-game configuration UI
+│       │               ├── commands/
+│       │               │   ├── GitSyncCommands.java  # Command registration
+│       │               │   └── CommandHandler.java   # Command execution logic
+│       │               ├── events/
+│       │               │   ├── ServerEventHandler.java  # Server event listeners
+│       │               │   └── PlayerEventHandler.java  # Player event listeners
+│       │               ├── api/
+│       │               │   ├── CoordinationClient.java  # API client for coordination server
+│       │               │   ├── HostStatus.java          # Host status data structures
+│       │               │   ├── QueueManager.java        # Queue interaction logic
+│       │               │   ├── PerformanceReporter.java # System specs and performance reporting
+│       │               │   ├── WorldRegistry.java       # Fetches available worlds from server
+│       │               │   ├── AuthenticationService.java # Verifies legitimate Minecraft accounts
+│       │               │   └── TunnelService.java       # Manages tunnel endpoints
+│       │               ├── performance/
+│       │               │   ├── SystemSpecCollector.java # Collects host system specifications
+│       │               │   ├── PerformanceMonitor.java  # Monitors TPS, memory usage, etc.
+│       │               │   ├── MigrationManager.java    # Handles host migration process
+│       │               │   └── ReconnectionHandler.java # Manages client reconnection
+│       │               ├── gui/
+│       │               │   ├── LoginScreen.java        # Authentication with coordination server
+│       │               │   ├── WorldListScreen.java    # Available shared worlds UI
+│       │               │   ├── WorldInfoScreen.java    # Details about a specific world
+│       │               │   ├── HostQueueScreen.java    # Queue management UI
+│       │               │   ├── HostControlScreen.java  # Controls for current host
+│       │               │   ├── PerformanceOverlay.java # Shows current performance metrics
+│       │               │   ├── components/             # Reusable UI components
+│       │               │   │   ├── WorldListEntry.java # List entry for available worlds
+│       │               │   │   ├── PlayerQueueEntry.java # List entry for queued players
+│       │               │   │   ├── ConfirmationPopup.java # Reusable confirmation dialog
+│       │               │   │   └── ToastNotification.java # Non-intrusive notifications
+│       │               │   └── widgets/               # Custom widget implementations
+│       │               │       ├── CircularProgressBar.java # For loading indicators
+│       │               │       ├── PlayerAvatar.java  # Shows player head with status
+│       │               │       └── WorldPreview.java  # Thumbnail/preview of world
+│       │               ├── tunnel/
+│       │               │   ├── TunnelManager.java     # Orchestrates tunnel creation
+│       │               │   ├── NgrokTunnel.java       # ngrok implementation
+│       │               │   ├── CloudflaredTunnel.java # cloudflared implementation
+│       │               │   └── LocalPortManager.java  # Handles port allocation
+│       │               ├── session/
+│       │               │   ├── WorldSession.java      # Tracks current world session
+│       │               │   ├── HostSession.java       # Manages hosting session
+│       │               │   └── ClientSession.java     # Manages client connection session
+│       │               └── util/
+│       │                   ├── WorldHelper.java      # World manipulation utilities
+│       │                   ├── GitCredentialStore.java  # Secure credential management
+│       │                   ├── NotificationManager.java  # Player notifications
+│       │                   ├── AccountVerifier.java   # Minecraft account verification
+│       │                   └── BinaryDownloader.java  # Downloads tunnel binaries if needed
+│       └── resources/
+│           ├── META-INF/
+│           │   └── mods.toml        # Mod metadata
+│           └── assets/
+│               └── gitworldsync/
+│                   ├── lang/        # Localization files
+│                   ├── textures/    # UI textures
+│                   │   ├── gui/     # GUI textures and icons
+│                   │   ├── icons/   # Status and action icons
+│                   │   └── logos/   # Mod and feature logos
+│                   └── sounds/      # Notification sounds
+└── README.md                        # Documentation
+```
+
+## Dependencies
+- **Minecraft Forge**: For modding capabilities and event system.
+- **JGit**: Java implementation of Git for repository operations.
+- **Cloth Config API**: For enhanced configuration UI.
+- **OkHttp**: For API communication with coordination server.
+- **OSHI**: For collecting detailed system hardware information.
+- **ngrok/cloudflared Java Wrappers**: For tunnel management (or embedded binaries).
+- **Minecraft Authentication Libraries**: For account verification.
+
+## Implementation Details
+1. **Git Repository Management**:
+   - Support for both HTTPS and SSH authentication.
+   - Credential caching with secure storage.
+   - Custom .gitignore to exclude unnecessary files from synchronization.
+
+2. **World Data Handling**:
+   - Proper handling of NBT data and binary files.
+   - Appropriate timing for world saving before Git operations.
+   - Selective synchronization of player data based on configuration.
+
+3. **Error Recovery**:
+   - Automatic rollback to previous state if Git operations fail.
+   - Comprehensive logging system for troubleshooting.
+   - Retry mechanisms for temporary network issues.
+
+4. **Multiplatform Considerations**:
+   - Cross-platform Git binary paths and commands.
+   - OS-specific file locking and permissions handling.
+   - Environment detection for appropriate configuration defaults.
+
+5. **Host Optimization Implementation**:
+   - Collect system specifications on startup (CPU, RAM, network bandwidth, disk speed).
+   - Monitor real-time server performance metrics (TPS, memory usage, chunk load times).
+   - Report metrics to coordination server with each heartbeat.
+   - Implement graceful host transition protocol for seamless migration.
+   - Provide client-side automatic reconnection to new host server.
+
+6. **Integrated GUI System**:
+   - Main menu button to access the Git World Sync interface.
+   - Login screen for authentication with the coordination server.
+   - World list screen showing available shared worlds with search/filter.
+   - Host queue interface showing current and upcoming hosts.
+   - One-click hosting activation with automatic tunnel setup.
+   - Status indicators for synchronization operations.
+   - Performance monitoring dashboard for hosts.
+
+7. **Embedded Tunneling**:
+   - Automatic download and setup of tunneling binaries (ngrok, cloudflared).
+   - Port management for hosting Minecraft server.
+   - Tunnel URL retrieval and reporting to coordination server.
+   - Fallback mechanisms if one tunneling provider fails.
+   - Bandwidth and connectivity monitoring.
+
+8. **Session Management**:
+   - Seamless transition between hosts with minimal disconnection.
+   - State preservation during host migration (inventory, position, etc.).
+   - Automatic reconnection to new host with progress indicator.
+   - Play session statistics tracking.
+   - Queue position updates and notifications.
+
+## Installation and Usage
+
+### Installation
+1. Install Minecraft Forge for your Minecraft version.
+2. Place the GitWorldSync mod JAR in your mods folder.
+3. Start Minecraft and authenticate with the coordination server.
+4. Configure Git credentials and repository preferences (first-time setup).
+
+### Basic Usage
+1. **Starting or Joining a Shared World**:
+   - Open the mod's main screen from the Minecraft main menu.
+   - Browse available worlds or create a new shared world.
+   - Select a world to view details (active host, queue status, etc.).
+   - Click "Join" to connect if a host is active, or "Host" to become the host if none exists.
+
+2. **Hosting a World**:
+   - The mod automatically pulls the latest world state from Git.
+   - Sets up tunneling for other players to connect.
+   - When you're done hosting, click "End Session" to allow the next player to host.
+   - World is automatically saved, committed, and pushed to Git.
+
+3. **Queuing for Host**:
+   - If world is currently hosted, join the queue to host next.
+   - Receive notification when your turn is approaching.
+   - Automatic host transition when current host ends their session.
+
+### Advanced Usage
+1. **Manual Synchronization**:
+   - Use `/gitsync pull` to manually pull the latest world state.
+   - Use `/gitsync push` to manually push the current world state.
+   - Use `/gitsync status` to check the current synchronization status.
+
+2. **Branch Management**:
+   - Use `/gitsync branch create <name>` to create a new branch (world version).
+   - Use `/gitsync branch switch <name>` to switch to a different branch.
+   - Use `/gitsync branch list` to list available branches.
+
+3. **Performance and Host Optimization**:
+   - Use `/gitsync specs` to view and update your system specifications.
+   - Use `/gitsync performance` to view current server performance metrics.
+   - Use `/gitsync migrate` to manually trigger host migration (admin only).
+   - Use `/gitsync host-candidates` to view potential better host candidates.
+
+4. **GUI Customization**:
+   - Use `/gitsync ui theme <theme-name>` to change UI appearance.
+   - Use `/gitsync ui compact` to enable compact mode for smaller screens.
+   - Use `/gitsync ui notifications <on/off>` to toggle in-game notifications.
+
+## Development Status
+### Things Done
+- Created the basic mod structure.
+- Implemented `GitHandler` for Git operations (pull and push).
+- Implemented `LockManager` for thread-safe locking.
+- Integrated `GitHandler` and `LockManager` into `GitWorldSyncMod`.
+- Added logic to pull the world from Git during the `ServerStartingEvent`.
+- Implemented logic to push the world to Git when the server stops.
+- Added error handling and logging for Git operations.
+- Securely manage Git credentials (e.g., use environment variables or a config file).
+- Implemented the configuration system with both file-based and UI options.
+- Developed the command system for manual control of Git operations.
+- Created the notification system for operation status updates.
+- Built the automatic backup system with configurable intervals.
+- Implemented conflict resolution strategies and UI.
+- Developed the world diff viewer for change tracking.
+- Optimized Git operations for large world files.
+- Added API client for coordination server integration.
+- Tested the mod in various Minecraft environments (single-player, LAN, dedicated server).
+- Implemented system specification collection and reporting.
+- Created server performance monitoring systems.
+- Developed host migration protocol with the coordination server.
+- Implemented client auto-reconnection to new host.
+- Created GUI screens for all mod functionalities.
+
+### Things To Do
+1. Implement embedded tunneling systems.
+2. Develop account verification with Minecraft authentication.
+3. Create world list fetching from coordination server.
+4. Build host queue management interface.
+5. Implement player transition handling for host migration.
+6. Develop automatic binary downloader for tunnel providers.
+7. Create performance monitoring overlay.
+8. Test host migration in various network conditions.
+
+## Notes for Future Development
+- Ensure that the `build.gradle` file is up-to-date with the correct Forge and JGit versions.
+- Use the `LockManager` to prevent race conditions during Git operations.
+- Consider security implications of storing Git credentials.
+- Test thoroughly with different world sizes to understand performance implications.
+- Research Git LFS (Large File Storage) for handling large world files more efficiently.
+- Consider adding support for differential backups to minimize repository size.
+- Consider implementing a rolling host system for communities with many suitable hosts.
+- Develop algorithms to balance host suitability with continuity (avoiding too-frequent switches).
+- Add player voting system for manual host migration requests.
+- Design GUI to match Minecraft visual style for consistency.
+- Consider implementing custom resource packs for different UI themes.
+- Explore WebRTC-based peer connections for potential lower-latency handoffs.
+- Investigate possibility of partial world state transfers (only changed regions).
+- Consider direct integration with popular hosting providers for temporary server hosting.
+- Note that the external LauncherCLI component has been removed in favor of fully integrated in-game GUI.
+
+## Potential Challenges
+- Handling large world files efficiently with Git.
+- Managing merge conflicts in binary NBT data.
+- Ensuring data integrity during synchronization.
+- Dealing with network issues during Git operations.
+- Supporting different Minecraft versions and mod compatibility.
+- Ensuring seamless host transitions with minimal player disruption.
+- Accurately measuring relevant system performance metrics.
+- Handling spotty connectivity during host migration.
+- Finding the right balance between automatic optimization and stability.
+- Managing player expectations during host transitions.
+- Finding reliable tunneling solutions that work across different network configurations.
+- Managing the embedded binary downloads securely.
+- Ensuring the GUI works across different Minecraft versions and mod loaders.
+- Handling Minecraft authentication without compromising account security.
+- Creating a seamless user experience during host transitions.

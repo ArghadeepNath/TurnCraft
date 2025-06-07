@@ -1,0 +1,241 @@
+# Coordination Server for Git-Backed Minecraft World Hosting
+
+## Overview
+The Coordination Server is a lightweight web service that manages host transitions and player queuing for the Git-Backed Turn-Based Minecraft World Hosting System. It provides a central point for tracking who is currently hosting, who is in line to host next, and how to connect to the current host.
+
+## Features
+
+### 1. Host Status Management
+- Track the current active host
+- Store connection details (tunnel URL, IP address, port)
+- Monitor host activity via heartbeats
+- Automatically release inactive hosts
+
+### 2. Player Queue System
+- First-in, first-out (FIFO) queue for players waiting to host
+- Fair distribution of hosting opportunities
+- Notifications when a player's turn is approaching
+- Priority queue options for special cases
+
+### 3. API Endpoints
+- **GET /status** - Returns information about current host (username, tunnel URL, uptime)
+- **POST /host** - Claim host role with tunnel URL and credentials
+- **POST /host/clear** - Release host role (current host only)
+- **GET /queue** - View current queue of waiting players
+- **POST /queue** - Join wait queue to become host later
+- **DELETE /queue/{userId}** - Leave the queue
+- **GET /next-host** - See who's next in line to host
+- **POST /heartbeat** - Periodic ping to confirm host is still active
+
+### 4. Security Features
+- Authentication for sensitive operations
+- Rate limiting to prevent abuse
+- Host verification to prevent hijacking
+- Token-based security for API access
+
+### 5. Monitoring Dashboard
+- Web interface showing current host status
+- Queue visualization
+- Historical hosting statistics
+- System health indicators
+
+## Technical Implementation
+
+### Stack Options
+- **Option 1**: Python with Flask/FastAPI
+  - Lightweight and easy to deploy
+  - Good for rapid development
+  - Excellent library support
+- **Option 2**: Node.js with Express
+  - Event-driven for good performance with many connections
+  - JavaScript ecosystem benefits
+  - Easy deployment options
+
+### Persistence Layers
+- **Lightweight Option**: SQLite for simple deployments
+- **Scalable Option**: PostgreSQL for larger communities
+- **In-Memory Option**: Redis for high-performance needs
+
+### Deployment Options
+- Docker container for easy setup
+- Cloud deployment (AWS, Azure, GCP)
+- Self-hosted on low-cost VPS
+
+## Project Structure
+```
+coordination-server/
+├── src/
+│   ├── app.js                # Main application (Node.js) OR app.py (Python)
+│   ├── controllers/
+│   │   ├── hostController.js  # Host management logic
+│   │   ├── queueController.js # Queue management logic
+│   │   └── statusController.js # Status reporting
+│   ├── models/
+│   │   ├── Host.js           # Host data model
+│   │   ├── Queue.js          # Queue data model
+│   │   └── User.js           # User data model
+│   ├── middleware/
+│   │   ├── auth.js           # Authentication middleware
+│   │   ├── rateLimiter.js    # Rate limiting
+│   │   └── logging.js        # Request logging
+│   ├── services/
+│   │   ├── hostService.js    # Host business logic
+│   │   ├── queueService.js   # Queue business logic
+│   │   └── notificationService.js # Notification handling
+│   └── utils/
+│       ├── logger.js         # Logging utility
+│       └── config.js         # Configuration management
+├── public/                   # Static assets for dashboard
+│   ├── css/
+│   ├── js/
+│   └── index.html            # Dashboard entry point
+├── tests/                    # Automated tests
+├── config/                   # Configuration files
+├── package.json              # Dependencies (Node.js)
+├── requirements.txt          # Dependencies (Python)
+└── README.md                 # Documentation
+```
+
+## API Interface
+
+### GET /status
+Returns the current hosting status.
+
+**Response:**
+```json
+{
+  "hasActiveHost": true,
+  "host": {
+    "username": "player1",
+    "tunnelUrl": "https://xyz123.ngrok.io",
+    "startTime": "2023-07-01T15:30:00Z",
+    "uptime": "2h 15m",
+    "playerCount": 3
+  },
+  "queueLength": 2
+}
+```
+
+### POST /host
+Claim the host role.
+
+**Request:**
+```json
+{
+  "username": "player2",
+  "tunnelUrl": "https://abc456.ngrok.io",
+  "serverPort": 25565,
+  "maxPlayers": 8,
+  "worldVersion": "survival-1.20.1-v3",
+  "token": "auth-token-here"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "hostId": "host-123",
+  "expiresAt": "2023-07-01T23:59:59Z",
+  "heartbeatInterval": 60
+}
+```
+
+### POST /heartbeat
+Update host status to show activity.
+
+**Request:**
+```json
+{
+  "hostId": "host-123",
+  "playerCount": 4,
+  "token": "auth-token-here"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "nextHeartbeatDue": "2023-07-01T18:01:00Z"
+}
+```
+
+### GET /queue
+View the current queue.
+
+**Response:**
+```json
+{
+  "queueLength": 2,
+  "queue": [
+    {
+      "position": 1,
+      "username": "player3",
+      "joinedAt": "2023-07-01T16:15:00Z",
+      "estimatedStartTime": "2023-07-01T19:30:00Z"
+    },
+    {
+      "position": 2,
+      "username": "player4",
+      "joinedAt": "2023-07-01T16:45:00Z",
+      "estimatedStartTime": "2023-07-01T22:30:00Z"
+    }
+  ]
+}
+```
+
+## Integration with Other Components
+
+### Git World Sync Mod Integration
+- Mod queries status endpoint to check if hosting is available
+- Reports host status when server starts/stops
+- Sends heartbeats while running
+
+### Launcher CLI Integration
+- Launcher uses API to claim host status
+- Sets up tunneling based on coordination server requirements
+- Manages the queue status for the player
+
+## Deployment Guide
+
+### Prerequisites
+- Node.js 14+ or Python 3.8+
+- Database (SQLite for small deployments, PostgreSQL for larger ones)
+- Reverse proxy (Nginx/Apache) for production deployments
+
+### Basic Setup
+1. Clone the repository
+2. Install dependencies: `npm install` or `pip install -r requirements.txt`
+3. Configure environment variables
+4. Initialize database: `npm run init-db` or `python manage.py init-db`
+5. Start server: `npm start` or `python app.py`
+
+### Docker Deployment
+```
+docker build -t mc-coordination-server .
+docker run -p 3000:3000 -v config:/app/config mc-coordination-server
+```
+
+## Development Roadmap
+
+### Phase 1: Core Functionality
+- Basic host tracking
+- Simple queue system
+- Essential API endpoints
+
+### Phase 2: Enhanced Features
+- User authentication
+- Persistent queue storage
+- Host statistics
+
+### Phase 3: Advanced Features
+- Web dashboard
+- Notifications system
+- Advanced queue management
+
+## Potential Challenges
+- Handling network failures gracefully
+- Preventing host abandonment
+- Securing the API against abuse
+- Scaling for larger communities
