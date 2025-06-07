@@ -191,11 +191,9 @@ View the current queue.
 - Mod queries status endpoint to check if hosting is available
 - Reports host status when server starts/stops
 - Sends heartbeats while running
-
-### Launcher CLI Integration
-- Launcher uses API to claim host status
-- Sets up tunneling based on coordination server requirements
-- Manages the queue status for the player
+- Manages queue interactions directly through the mod's in-game interface
+- Handles tunneling setup and management
+- Updates host status and performance metrics
 
 ## Deployment Guide
 
@@ -239,3 +237,4 @@ docker run -p 3000:3000 -v config:/app/config mc-coordination-server
 - Preventing host abandonment
 - Securing the API against abuse
 - Scaling for larger communities
+- Ensuring compatibility with mod's integrated functionality
