@@ -7,7 +7,7 @@ This project enables players to take turns hosting a Minecraft world through a c
 
 Players can seamlessly transfer hosting duties without manually transferring world files. The system uses Git repositories to manage world state transfers and a coordination server to track who's currently hosting.
 
-The system includes advanced features like server fallbacks, permission management, federation, metrics collection, version checks, social features, and cold-standby hosting to ensure optimal performance and user experience.
+The system includes advanced features like server fallbacks, permission management, federation, metrics collection, version checks, social features, and cold-standby hosting to ensure optimal performance and user experience. Access control is managed through player-specific metadata stored on a Git-hased Player Access Metadata,hosting is done with temporary time-limited tokens providing secure Git access during hosting sessions.
 
 ## System Components
 
@@ -21,6 +21,8 @@ The system includes advanced features like server fallbacks, permission manageme
 - Supports version compatibility checking for players
 - Includes friends and group system for social interaction
 - Provides cold-standby hosting for quick failover
+- Uses token-based Git authentication for secure, time-limited repository access
+- Implements heartbeat-based token renewal during active hosting
 - See `GitWorldSyncMod.txt` for detailed implementation
 
 ### 2. Coordination Server
@@ -31,6 +33,9 @@ The system includes advanced features like server fallbacks, permission manageme
 - Coordinates version compatibility checking
 - Facilitates social features (friends, groups)
 - Orchestrates cold-standby hosting system
+- Issues and manages temporary Git access tokens for secure repository operations
+- Stores world access metadata defining player permissions
+- Processes token heartbeats to extend token validity during active hosting
 - See `CoordinationServer.txt` for detailed implementation
 
 ## System Architecture
@@ -45,22 +50,35 @@ The system includes advanced features like server fallbacks, permission manageme
          │                      │                       │
          ▼                      ▼                       ▼
 ┌────────────────────────────────────────────────────────────────┐
-│                      Git Repository                            │
-└────────────────────────────────────────────────────────────────┘
-                              ▲
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────┐
-│                    Primary Coordination Server                 │◀───┐
-└────────────────────────────────────────────────────────────────┘    │
-         ▲                      ▲                       ▲             │
-         │                      │                       │             │
-         ▼                      ▼                       ▼             │
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐  │
-│  Fallback       │     │  Fallback       │     │  Metrics &      │  │
-│  Coordination   │◀───▶│  Coordination   │◀───▶│  Performance    │──┘
-│  Server 1       │     │  Server 2       │     │  Data           │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+│                      Git Repository                            │◀─┐
+└────────────────────────────────────────────────────────────────┘  │
+                              ▲                                     │
+                              │                                     │
+                              ▼                                     │
+┌────────────────────────────────────────────────────────────────┐  │
+│                    Primary Coordination Server                 │  │
+│                                                                │  │
+│     ┌──────────────┐         ┌───────────────────────┐        │  │
+│     │ Access       │◀───────▶│ Token Management      │────────┘  │
+│     │ Metadata     │         │ (Issue, Renew, Revoke)│           │
+│     └──────────────┘         └───────────────────────┘           │
+│                                       ▲                          │
+└───────────────────────────────────────┼──────────────────────────┘
+                                        │
+                                        │ Heartbeats
+                                        │
+                             ┌──────────┴───────────┐
+                             │  Active Host Player  │
+                             │  (Token Holder)      │
+                             └─────────┬────────────┘
+                                       │
+                                       │ Token Expiration
+                                       │ When Hosting Ends
+                                       ▼
+                             ┌─────────────────────────┐
+                             │ Next Host in Queue      │
+                             │ (Gets New Token)        │
+                             └─────────────────────────┘
 ```
 
 ## Advanced Features
@@ -114,25 +132,45 @@ The system includes advanced features like server fallbacks, permission manageme
 - Prioritized standby selection based on performance
 - Status indicators for standby readiness
 
+### Git-Based Access Control
+- Player permissions stored as metadata on coordination server
+- Read/join and write/host permission levels
+- Permission checks before performing Git operations
+- Integration with friends and groups system
+- Support for public, private, and invite-only worlds
+
+### Token-Based Authentication
+- Temporary Git access tokens with limited time-to-live (TTL)
+- Heartbeat-based token renewal for active hosting sessions
+- Automatic token expiration when hosting ends
+- Secure token storage and management
+- Token revocation for emergency situations
+
 ## Workflow
 1. **Initial Setup**:
    - Create a Git repository for the Minecraft world
    - All players install the mod, configure Git credentials
    - Deploy the coordination server
+   - Configure initial world access permissions
 
 2. **Hosting Process**:
    - Player checks coordination server for current host status via the mod's in-game UI
-   - If no active host, player can claim hosting role
-   - Mod pulls latest world from Git
+   - Player's access permissions are verified against server metadata
+   - If no active host another player can claim hosting role
+   - Coordination server issues a temporary Git write token to the player
+   - Mod pulls latest world from Git using the token
    - Starts Minecraft server with integrated reverse tunnel
    - Registers as host with coordination server
-   - Other players connect via the tunnel URL
+   - Begins sending periodic heartbeats to extend token validity
+   - Other players with access can connect via the tunnel URL
 
 3. **Host Transition**:
    - Current host stops their server
-   - Git World Sync Mod pushes world to Git
+   - Heartbeats cease and token is no longer renewed
+   - Git World Sync Mod pushes world to Git with final token usage
    - Mod notifies coordination server that host role is released
-   - Next player in queue can become host
+   - Token is explicitly invalidated or expires shortly after
+   - Next player in queue can become host and receive a new token
    - Cold-standby host may activate immediately for seamless transition
 
 4. **Fallback Handling**:
