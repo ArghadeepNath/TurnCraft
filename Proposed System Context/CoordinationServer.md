@@ -76,6 +76,20 @@ The Coordination Server is a lightweight web service that manages host transitio
 - Manage seamless transition protocol
 - Monitor standby sync status
 
+### 12. Git Access Control Management
+- Store player access metadata for each world repository
+- Process access control verification requests before Git operations
+- Manage permission assignments and revocations
+- Support group-based access assignment
+- Integration with Minecraft authentication for identity verification
+
+### 13. Token Lifecycle Management
+- Issue temporary Git access tokens for hosting sessions
+- Process token heartbeats to extend token validity
+- Auto-expire tokens after inactivity or session end
+- Maintain token revocation mechanisms for emergencies
+- Secure token storage and validation
+
 ## Technical Implementation
 
 ### Stack Options
@@ -114,7 +128,9 @@ coordination-server/
 │   │   ├── groupsController.js # Group management
 │   │   ├── versionController.js # Version compatibility
 │   │   ├── metricsController.js # Performance metrics
-│   │   └── standbyController.js # Cold-standby management
+│   │   ├── standbyController.js # Cold-standby management
+│   │   ├── accessController.js  # Git repository access control
+│   │   └── tokenController.js   # Git access token management
 │   ├── models/
 │   │   ├── Host.js           # Host data model
 │   │   ├── Queue.js          # Queue data model
@@ -125,12 +141,15 @@ coordination-server/
 │   │   ├── Group.js          # Group definition model
 │   │   ├── VersionInfo.js    # Version compatibility model
 │   │   ├── PerformanceMetric.js # Performance data model
-│   │   └── FederatedServer.js # Federated server model
+│   │   ├── FederatedServer.js # Federated server model
+│   │   ├── AccessMetadata.js  # Git repository access rights model
+│   │   └── GitToken.js        # Repository access token model
 │   ├── middleware/
 │   │   ├── auth.js           # Authentication middleware
 │   │   ├── rateLimiter.js    # Rate limiting
 │   │   ├── logging.js        # Request logging
-│   │   └── federationAuth.js # Federation authentication
+│   │   ├── federationAuth.js # Federation authentication
+│   │   └── tokenValidator.js # Git token validation middleware
 │   ├── services/
 │   │   ├── hostService.js    # Host business logic
 │   │   ├── queueService.js   # Queue business logic
@@ -141,12 +160,16 @@ coordination-server/
 │   │   ├── groupService.js   # Group management logic
 │   │   ├── versionService.js # Version compatibility logic
 │   │   ├── metricsService.js # Performance analytics
-│   │   └── standbyService.js # Cold-standby coordination
+│   │   ├── standbyService.js # Cold-standby coordination
+│   │   ├── accessService.js  # Git repository access control logic
+│   │   └── tokenService.js   # Git token management and renewal logic
 │   └── utils/
 │       ├── logger.js         # Logging utility
 │       ├── config.js         # Configuration management
 │       ├── federationProtocol.js # Federation protocol implementation
-│       └── healthCheck.js    # Server health monitoring
+│       ├── healthCheck.js    # Server health monitoring
+│       ├── tokenGenerator.js # Secure token generation and validation
+│       └── accessValidator.js # Permission validation utilities
 ├── public/                   # Static assets for dashboard
 │   ├── css/
 │   ├── js/
@@ -307,6 +330,129 @@ Get version compatibility information for a world.
 }
 ```
 
+### GET /access/{worldId}
+Get access permissions for a specific world repository.
+
+**Response:**
+```json
+{
+  "worldId": "world-123",
+  "accessType": "invite-only",
+  "permissions": [
+    {
+      "player": "player1",
+      "permissionLevel": "OWNER",
+      "canRead": true,
+      "canWrite": true,
+      "canHost": true,
+      "canInvite": true
+    },
+    {
+      "player": "player2",
+      "permissionLevel": "HOST",
+      "canRead": true,
+      "canWrite": true,
+      "canHost": true,
+      "canInvite": false
+    },
+    {
+      "player": "player3",
+      "permissionLevel": "PLAYER",
+      "canRead": true,
+      "canWrite": false,
+      "canHost": false,
+      "canInvite": false
+    }
+  ],
+  "groups": [
+    {
+      "groupId": "group1",
+      "groupName": "Admin Team",
+      "permissionLevel": "HOST"
+    }
+  ]
+}
+```
+
+### POST /access/{worldId}/check
+Check if a player has specific access to a world.
+
+**Request:**
+```json
+{
+  "player": "player2",
+  "accessType": "WRITE"
+}
+```
+
+**Response:**
+```json
+{
+  "hasAccess": true,
+  "permissionLevel": "HOST"
+}
+```
+
+### POST /tokens/git
+Request a Git access token for a world.
+
+**Request:**
+```json
+{
+  "worldId": "world-123",
+  "player": "player2"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "git-access-token-xyz",
+  "expiresAt": "2023-09-01T15:30:00Z",
+  "worldId": "world-123",
+  "tokenType": "write"
+}
+```
+
+### POST /tokens/git/heartbeat
+Extend the validity of a Git access token.
+
+**Request:**
+```json
+{
+  "token": "git-access-token-xyz",
+  "worldId": "world-123"
+}
+```
+
+**Response:**
+```json
+{
+  "tokenValid": true,
+  "expiresAt": "2023-09-01T15:35:00Z",
+  "nextHeartbeatDue": "2023-09-01T15:34:00Z"
+}
+```
+
+### POST /tokens/git/revoke
+Revoke a Git access token.
+
+**Request:**
+```json
+{
+  "token": "git-access-token-xyz",
+  "worldId": "world-123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Token revoked successfully"
+}
+```
+
 ## Integration with Other Components
 
 ### Git World Sync Mod Integration
@@ -320,6 +466,11 @@ Get version compatibility information for a world.
 - Manages federation discovery and fallbacks
 - Implements permission and version compatibility checks
 - Provides friends and group management UI
+- Verifies player access rights before Git operations
+- Requests temporary Git tokens for authorized hosting sessions
+- Sends regular heartbeats to keep tokens valid during active hosting
+- Automatically handles token expiration and revocation when hosting ends
+- Uses tokens for authenticating Git operations with the repository
 
 ## Deployment Guide
 
@@ -380,6 +531,13 @@ docker run -p 3000:3000 -v config:/app/config mc-coordination-server
 - Standby host system
 - Automated performance optimization
 
+### Phase 7: Access Control & Token System
+- Git repository access metadata system
+- Token-based Git authentication
+- Heartbeat-based token renewal
+- Token lifecycle management
+- Security auditing and improvements
+
 ## Potential Challenges
 - Handling network failures gracefully
 - Preventing host abandonment
@@ -390,3 +548,8 @@ docker run -p 3000:3000 -v config:/app/config mc-coordination-server
 - Handling permission conflicts across federated servers
 - Optimizing cold-standby performance impact
 - Balancing privacy with social features
+- Ensuring token security across network communications
+- Handling token timeouts and renewals during unstable connections
+- Managing token revocation in distributed environments
+- Preventing token theft or unauthorized use
+- Balancing security with usability for access control
