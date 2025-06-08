@@ -156,7 +156,9 @@ git-world-sync-mod/
 │       │               │   ├── AuthenticationService.java # Verifies legitimate Minecraft accounts
 │       │               │   ├── TunnelService.java       # Manages tunnel endpoints
 │       │               │   ├── FederationClient.java    # Handles cross-server discovery
-│       │               │   └── ServerHealthMonitor.java # Tracks coordination server availability
+│       │               │   ├── ServerHealthMonitor.java # Tracks coordination server availability
+│       │               │   ├── AccessControlClient.java # Handles access right verification
+│       │               │   └── TokenManager.java        # Manages Git write tokens
 │       │               ├── performance/
 │       │               │   ├── SystemSpecCollector.java # Collects host system specifications
 │       │               │   ├── PerformanceMonitor.java  # Monitors TPS, memory usage, etc.
@@ -200,7 +202,8 @@ git-world-sync-mod/
 │       │               │   ├── HostSession.java       # Manages hosting session
 │       │               │   ├── ClientSession.java     # Manages client connection session
 │       │               │   ├── StandbySession.java    # Manages standby host session
-│       │               │   └── FallbackMode.java      # Coordination server fallback handling
+│       │               │   ├── FallbackMode.java      # Coordination server fallback handling
+│       │               │   └── TokenHeartbeatService.java # Handles token renewal heartbeats
 │       │               ├── social/
 │       │               │   ├── FriendsManager.java    # Manages friend relationships
 │       │               │   ├── GroupManager.java      # Handles group creation and management
@@ -221,7 +224,8 @@ git-world-sync-mod/
 │       │                   ├── NotificationManager.java  # Player notifications
 │       │                   ├── AccountVerifier.java   # Minecraft account verification
 │       │                   ├── BinaryDownloader.java  # Downloads tunnel binaries if needed
-│       │                   └── FederationProtocol.java  # Federation handshake implementation
+│       │                   ├── FederationProtocol.java  # Federation handshake implementation
+│       │                   └── GitAccessToken.java    # Git access token data structure
 │       └── resources/
 │           ├── META-INF/
 │           │   └── mods.toml        # Mod metadata
@@ -341,6 +345,20 @@ git-world-sync-mod/
     - Notify players of host change.
     - Prioritize hosts based on performance and reliability.
 
+16. **Git-Based Access Control**:
+    - Player access rights stored in coordination server metadata.
+    - Permission levels for world access (read/join, write/host).
+    - Access verification before performing Git operations.
+    - Support for individual and group-based permissions.
+    - Integration with friend system for access controls.
+
+17. **Token-Based Git Authentication**:
+    - Temporary Git write tokens issued by coordination server.
+    - Token renewal via periodic heartbeats during active hosting.
+    - Automatic token expiration when hosting ends.
+    - Secure token storage using system keystore.
+    - Token invalidation on session termination.
+
 ## Installation and Usage
 
 ### Installation
@@ -427,6 +445,13 @@ git-world-sync-mod/
     - Use `/gitsync modpack` to download and install compatible modpacks.
     - Use `/gitsync required-mods` to view required mods for the world.
 
+11. **Access Control Management**:
+    - Use `/gitsync access <world> list` to view current access permissions.
+    - Use `/gitsync access <world> grant <player> <permission>` to grant permissions.
+    - Use `/gitsync access <world> revoke <player> <permission>` to revoke permissions.
+    - Use `/gitsync access <world> public <true/false>` to toggle public access.
+    - Use `/gitsync tokens` to view active Git tokens and their status.
+
 ## Development Status
 ### Things Done
 
@@ -460,14 +485,19 @@ git-world-sync-mod/
 - Implemented version compatibility checking system.
 - Created friends and groups social system.
 - Developed cold-standby hosting functionality.
-1. Implement embedded tunneling systems.
-2. Develop account verification with Minecraft authentication.
-3. Create world list fetching from coordination server.
-4. Build host queue management interface.
-5. Implement player transition handling for host migration.
-6. Develop automatic binary downloader for tunnel providers.
-7. Create performance monitoring overlay.
-8. Test host migration in various network conditions.
+- Implement embedded tunneling systems.
+- Develop account verification with Minecraft authentication.
+- Create world list fetching from coordination server.
+- Build host queue management interface.
+- Implement player transition handling for host migration.
+- Develop automatic binary downloader for tunnel providers.
+- Create performance monitoring overlay.
+- Test host migration in various network conditions.
+- Test Git access token implementation across different networks.
+- Implement robust token renewal and fallback mechanisms.
+- Create UI for managing world access permissions.
+- Test access control with large player communities.
+- Implement token revocation for emergency situations.
 
 ## Notes for Future Development
 - Ensure that the `build.gradle` file is up-to-date with the correct Forge and JGit versions.
@@ -485,6 +515,11 @@ git-world-sync-mod/
 - Investigate possibility of partial world state transfers (only changed regions).
 - Consider direct integration with popular hosting providers for temporary server hosting.
 - Note that the external LauncherCLI component has been removed in favor of fully integrated in-game GUI.
+- Implement multi-factor authentication for sensitive operations.
+- Consider implementing token revocation lists for handling lost/stolen tokens.
+- Research options for offline authentication when coordination server is unavailable.
+- Design a permission hierarchy system for more granular access control.
+- Implement audit logging for access control changes and token usage.
 
 ## Potential Challenges
 - Handling large world files efficiently with Git.
@@ -502,3 +537,8 @@ git-world-sync-mod/
 - Ensuring the GUI works across different Minecraft versions and mod loaders.
 - Handling Minecraft authentication without compromising account security.
 - Creating a seamless user experience during host transitions.
+- Managing token renewal during unstable network connections.
+- Handling token synchronization across multiple coordination servers.
+- Balancing security with ease of use in the permission system.
+- Dealing with clock synchronization issues affecting token expiration.
+- Managing token revocation in offline scenarios.
