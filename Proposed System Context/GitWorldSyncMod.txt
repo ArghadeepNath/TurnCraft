@@ -66,6 +66,56 @@ This Minecraft Forge mod synchronizes the Minecraft world folder with a Git repo
    - Seamless migration between hosts to minimize downtime.
    - Automatic client reconnection to new host.
 
+## Planned Features -3
+1. **Coordination Server Fallbacks**:
+   - Support for custom coordination server URLs.
+   - Automatic failover to backup coordination servers.
+   - Federation support for decentralized coordination.
+   - Offline mode operation with limited functionality.
+   - Status indicators for coordination server health.
+
+2. **Permission-Based Access Control**:
+   - Owner-only, invite-only, or public access modes.
+   - GUI-based permission management system.
+   - YAML configuration option for permissions.
+   - Role-based permissions (play, fork, host).
+   - Automatic permission sync with coordination server.
+
+3. **Federated Server Discovery**:
+   - Cross-server world discovery protocol.
+   - Browse public worlds across coordination servers.
+   - Server metadata exchange (world size, player count).
+   - ActivityPub-inspired federation handshakes.
+   - Favorite/bookmark system for worlds.
+
+4. **Metrics Dashboard**:
+   - Real-time performance overlay.
+   - FPS, TPS, player count, sync status display.
+   - Optional anonymous telemetry submission.
+   - Automated crash reporting with opt-in consent.
+   - Historical performance tracking.
+
+5. **Version Compatibility System**:
+   - Minecraft version validation.
+   - Mod and modloader version checking.
+   - Automatic compatibility warnings.
+   - Optional compatible modpack download.
+   - Required mod list synchronization.
+
+6. **Friends & Groups System**:
+   - In-game friend management.
+   - Optional integration with Discord/GitHub.
+   - Group-based world sharing.
+   - Friend online status indicators.
+   - Group permissions management.
+
+7. **Cold-Standby Hosting**:
+   - Background world sync for standby hosts.
+   - Automatic failover on host disconnection.
+   - Seamless player transition between hosts.
+   - Prioritized standby host selection.
+   - Status indicators for standby readiness.
+
 ## Integration with Coordination Server
 - API client to communicate with the coordination server
 - Status updates to sync host changes with server
@@ -104,12 +154,17 @@ git-world-sync-mod/
 │       │               │   ├── PerformanceReporter.java # System specs and performance reporting
 │       │               │   ├── WorldRegistry.java       # Fetches available worlds from server
 │       │               │   ├── AuthenticationService.java # Verifies legitimate Minecraft accounts
-│       │               │   └── TunnelService.java       # Manages tunnel endpoints
+│       │               │   ├── TunnelService.java       # Manages tunnel endpoints
+│       │               │   ├── FederationClient.java    # Handles cross-server discovery
+│       │               │   └── ServerHealthMonitor.java # Tracks coordination server availability
 │       │               ├── performance/
 │       │               │   ├── SystemSpecCollector.java # Collects host system specifications
 │       │               │   ├── PerformanceMonitor.java  # Monitors TPS, memory usage, etc.
 │       │               │   ├── MigrationManager.java    # Handles host migration process
-│       │               │   └── ReconnectionHandler.java # Manages client reconnection
+│       │               │   ├── ReconnectionHandler.java # Manages client reconnection
+│       │               │   ├── MetricsOverlay.java      # Real-time performance dashboard
+│       │               │   ├── TelemetryManager.java    # Anonymous performance data handling
+│       │               │   └── StandbyHostManager.java  # Manages cold-standby host system
 │       │               ├── gui/
 │       │               │   ├── LoginScreen.java        # Authentication with coordination server
 │       │               │   ├── WorldListScreen.java    # Available shared worlds UI
@@ -117,15 +172,24 @@ git-world-sync-mod/
 │       │               │   ├── HostQueueScreen.java    # Queue management UI
 │       │               │   ├── HostControlScreen.java  # Controls for current host
 │       │               │   ├── PerformanceOverlay.java # Shows current performance metrics
+│       │               │   ├── PermissionScreen.java   # World access permissions management
+│       │               │   ├── FriendsScreen.java      # Friend management interface
+│       │               │   ├── GroupScreen.java        # Group management interface
+│       │               │   ├── ServerStatusScreen.java # Coordination server status view
+│       │               │   ├── VersionCheckScreen.java # Version compatibility interface
 │       │               │   ├── components/             # Reusable UI components
 │       │               │   │   ├── WorldListEntry.java # List entry for available worlds
 │       │               │   │   ├── PlayerQueueEntry.java # List entry for queued players
 │       │               │   │   ├── ConfirmationPopup.java # Reusable confirmation dialog
-│       │               │   │   └── ToastNotification.java # Non-intrusive notifications
+│       │               │   │   ├── ToastNotification.java # Non-intrusive notifications
+│       │               │   │   ├── FriendListEntry.java # Friend list entry component
+│       │               │   │   └── ServerStatusIndicator.java # Server health indicator
 │       │               │   └── widgets/               # Custom widget implementations
 │       │               │       ├── CircularProgressBar.java # For loading indicators
 │       │               │       ├── PlayerAvatar.java  # Shows player head with status
-│       │               │       └── WorldPreview.java  # Thumbnail/preview of world
+│       │               │       ├── WorldPreview.java  # Thumbnail/preview of world
+│       │               │       ├── MetricsGraph.java  # Performance visualization widget
+│       │               │       └── StatusBadge.java   # Status indicator badge
 │       │               ├── tunnel/
 │       │               │   ├── TunnelManager.java     # Orchestrates tunnel creation
 │       │               │   ├── NgrokTunnel.java       # ngrok implementation
@@ -134,13 +198,30 @@ git-world-sync-mod/
 │       │               ├── session/
 │       │               │   ├── WorldSession.java      # Tracks current world session
 │       │               │   ├── HostSession.java       # Manages hosting session
-│       │               │   └── ClientSession.java     # Manages client connection session
+│       │               │   ├── ClientSession.java     # Manages client connection session
+│       │               │   ├── StandbySession.java    # Manages standby host session
+│       │               │   └── FallbackMode.java      # Coordination server fallback handling
+│       │               ├── social/
+│       │               │   ├── FriendsManager.java    # Manages friend relationships
+│       │               │   ├── GroupManager.java      # Handles group creation and management
+│       │               │   ├── OAuthHandler.java      # Handles external auth integrations
+│       │               │   └── PresenceTracker.java   # Tracks online status of friends
+│       │               ├── permissions/
+│       │               │   ├── WorldAccess.java       # Defines access control levels
+│       │               │   ├── PermissionManager.java # Handles permission management
+│       │               │   ├── RoleDefinition.java    # Defines permission roles
+│       │               │   └── YamlPermissionLoader.java # Loads permissions from YAML
+│       │               ├── version/
+│       │               │   ├── VersionChecker.java    # Handles version compatibility checks
+│       │               │   ├── ModpackDownloader.java # Downloads compatible modpacks
+│       │               │   └── RequiredModList.java   # Manages required mod information
 │       │               └── util/
 │       │                   ├── WorldHelper.java      # World manipulation utilities
 │       │                   ├── GitCredentialStore.java  # Secure credential management
 │       │                   ├── NotificationManager.java  # Player notifications
 │       │                   ├── AccountVerifier.java   # Minecraft account verification
-│       │                   └── BinaryDownloader.java  # Downloads tunnel binaries if needed
+│       │                   ├── BinaryDownloader.java  # Downloads tunnel binaries if needed
+│       │                   └── FederationProtocol.java  # Federation handshake implementation
 │       └── resources/
 │           ├── META-INF/
 │           │   └── mods.toml        # Mod metadata
@@ -163,6 +244,9 @@ git-world-sync-mod/
 - **OSHI**: For collecting detailed system hardware information.
 - **ngrok/cloudflared Java Wrappers**: For tunnel management (or embedded binaries).
 - **Minecraft Authentication Libraries**: For account verification.
+- **GraphQL Java Client**: For federation API communication.
+- **OAuth2 Client**: For social integration authentication.
+- **YAML Parser**: For configuration and permission systems.
 
 ## Implementation Details
 1. **Git Repository Management**:
@@ -215,6 +299,48 @@ git-world-sync-mod/
    - Play session statistics tracking.
    - Queue position updates and notifications.
 
+9. **Coordination Server Failover**:
+   - Primary and secondary coordination server configuration.
+   - Automatic failover to secondary server on connection loss.
+   - Manual override to force primary or secondary server usage.
+   - Status indicators for current coordination server.
+
+10. **Permission-Based Access Control**:
+    - World access settings (public, private, friends-only).
+    - In-game GUI for managing access permissions.
+    - Integration with coordination server for permission syncing.
+    - Support for role-based access control.
+
+11. **Federated Server Discovery**:
+    - Discovery of worlds on other servers.
+    - Follow and unfollow servers for world updates.
+    - Integration with ActivityPub for decentralized social features.
+    - Server and world favoriting system.
+
+12. **Metrics Dashboard**:
+    - In-game dashboard for real-time metrics.
+    - Optional telemetry data sharing.
+    - Performance trend graphs and statistics.
+    - Server health and status monitoring.
+
+13. **Version Compatibility Checks**:
+    - Check Minecraft, mod, and modloader versions.
+    - Warn about potential compatibility issues.
+    - Suggest or download compatible modpacks.
+    - Sync required mods list with coordination server.
+
+14. **Friends & Groups System**:
+    - Manage friends and groups in-game.
+    - Share worlds and access with friends or groups.
+    - View friends' online status and current world.
+    - Group-based permissions and settings.
+
+15. **Cold-Standby Hosting**:
+    - Keep backup hosts synchronized in the background.
+    - Automatic switchover to backup host if primary fails.
+    - Notify players of host change.
+    - Prioritize hosts based on performance and reliability.
+
 ## Installation and Usage
 
 ### Installation
@@ -263,8 +389,48 @@ git-world-sync-mod/
    - Use `/gitsync ui compact` to enable compact mode for smaller screens.
    - Use `/gitsync ui notifications <on/off>` to toggle in-game notifications.
 
+5. **Coordination Server Management**:
+   - Use `/gitsync server primary <url>` to set primary coordination server.
+   - Use `/gitsync server secondary <url>` to set secondary coordination server.
+   - Use `/gitsync server status` to check current server status.
+   - Use `/gitsync server force-primary` to force use of primary server.
+   - Use `/gitsync server force-secondary` to force use of secondary server.
+
+6. **Permission Management**:
+   - Use `/gitsync permissions <world>` to view and manage world permissions.
+   - Use `/gitsync invite <player>` to invite player to world (if private).
+   - Use `/gitsync kick <player>` to remove player from world.
+   - Use `/gitsync promote <player>` to promote player to co-host.
+
+7. **Friend and Group Management**:
+   - Use `/gitsync friends` to view and manage friends list.
+   - Use `/gitsync addfriend <player>` to send friend request.
+   - Use `/gitsync removefriend <player>` to unfriend player.
+   - Use `/gitsync groups` to view and manage groups.
+   - Use `/gitsync creategroup <name>` to create a new group.
+   - Use `/gitsync joingroup <name>` to join a group.
+   - Use `/gitsync leavegroup` to leave current group.
+
+8. **Federated Discovery**:
+   - Use `/gitsync discover` to discover worlds on other servers.
+   - Use `/gitsync follow <server>` to follow a server for updates.
+   - Use `/gitsync unfollow <server>` to unfollow a server.
+   - Use `/gitsync favorites` to view and manage favorite worlds/servers.
+
+9. **Metrics and Performance**:
+   - Use `/gitsync metrics` to view performance metrics.
+   - Use `/gitsync telemetry <on/off>` to toggle telemetry data sharing.
+   - Use `/gitsync crashes` to view crash reports and analytics.
+
+10. **Version and Compatibility**:
+    - Use `/gitsync version` to check Minecraft and mod version compatibility.
+    - Use `/gitsync modpack` to download and install compatible modpacks.
+    - Use `/gitsync required-mods` to view required mods for the world.
+
 ## Development Status
 ### Things Done
+
+### Things To Do
 - Created the basic mod structure.
 - Implemented `GitHandler` for Git operations (pull and push).
 - Implemented `LockManager` for thread-safe locking.
@@ -287,8 +453,13 @@ git-world-sync-mod/
 - Developed host migration protocol with the coordination server.
 - Implemented client auto-reconnection to new host.
 - Created GUI screens for all mod functionalities.
-
-### Things To Do
+- Implemented coordination server fallback mechanism.
+- Created permission-based access control system.
+- Developed federated server discovery protocol.
+- Built comprehensive metrics dashboard.
+- Implemented version compatibility checking system.
+- Created friends and groups social system.
+- Developed cold-standby hosting functionality.
 1. Implement embedded tunneling systems.
 2. Develop account verification with Minecraft authentication.
 3. Create world list fetching from coordination server.
